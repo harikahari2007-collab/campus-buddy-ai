@@ -1,87 +1,99 @@
+const input = document.getElementById("user-input");
 const chatBox = document.getElementById("chat-box");
+const sendBtn = document.getElementById("send-btn");
+const micBtn = document.getElementById("mic-btn");
 
-function appendMessage(text, sender) {
+// ✅ FAQ DATA (RAG simulation)
+const faqs = [
+  { q: "canteen", a: "The canteen is open from 9 AM to 5 PM." },
+  { q: "library", a: "Library is open till 8 PM." },
+  { q: "fees", a: "Fees can be paid through the admin office or online portal." },
+  { q: "hostel", a: "Hostel facilities include WiFi, food, and security." }
+];
+
+// 🎯 SEND BUTTON
+sendBtn.onclick = sendMessage;
+
+// 🎯 ENTER KEY
+input.addEventListener("keypress", function(e) {
+  if (e.key === "Enter") sendMessage();
+});
+
+// 🎤 MIC SETUP
+let recognition;
+
+if ('webkitSpeechRecognition' in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = "en-IN";
+
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    input.value = text;
+    sendMessage();
+  };
+
+  recognition.onerror = () => alert("Mic error or permission denied");
+}
+
+// 🎤 MIC BUTTON
+micBtn.onclick = () => {
+  if (!recognition) {
+    alert("Use Chrome for mic");
+    return;
+  }
+  recognition.start();
+};
+
+// 💬 SEND MESSAGE FUNCTION
+function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMessage(text, "user");
+  input.value = "";
+
+  setTimeout(() => {
+    const reply = getAnswer(text);
+    addMessage(reply, "bot");
+  }, 500);
+}
+
+// 🤖 GET ANSWER (RAG logic)
+function getAnswer(userText) {
+  userText = userText.toLowerCase();
+
+  for (let item of faqs) {
+    if (userText.includes(item.q)) {
+      return item.a;
+    }
+  }
+
+  return "I am your Campus Assistant. Ask about canteen, hostel, fees, library.";
+}
+
+// 💬 ADD MESSAGE
+function addMessage(text, type) {
   const msg = document.createElement("div");
-  msg.classList.add("message", sender);
+  msg.className = "message " + type;
 
   msg.innerHTML = `
-    <span class="text"></span>
-    ${sender === "bot" ? '<div class="voice-btn" onclick="speakText(this)">🔊</div>' : ''}
+    ${text}
+    ${type === "bot" ? `<div class="voice-btn">🔊</div>` : ""}
   `;
 
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
 
-  typeText(msg.querySelector(".text"), text);
-}
-
-// typing animation
-function typeText(element, text) {
-  let i = 0;
-  const interval = setInterval(() => {
-    element.textContent += text[i];
-    i++;
-    if (i >= text.length) clearInterval(interval);
-  }, 20);
-}
-
-// send message
-function sendMessage() {
-  const input = document.getElementById("user-input");
-  const text = input.value.trim();
-  if (!text) return;
-
-  appendMessage(text, "user");
-
-  input.value = "";
-
-  // simple bot reply
-  setTimeout(() => {
-    appendMessage(getBotReply(text), "bot");
-  }, 500);
-}
-
-// bot logic
-function getBotReply(text) {
-  text = text.toLowerCase();
-
-  if (text.includes("hi")) return "Hello! How can I help you?";
-  if (text.includes("canteen")) return "Canteen is open from 9 AM to 5 PM.";
-  if (text.includes("library")) return "Library is open till 8 PM.";
-  
-  return "I am your campus assistant 🤖";
-}
-
-// voice speak
-function speakText(btn) {
-  const text = btn.parentElement.querySelector(".text").textContent;
-
-  const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = "en-US";
-  window.speechSynthesis.speak(speech);
-}
-
-// mic input
-function startListening() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("Mic not supported in this browser");
-    return;
+  // 🔊 SPEAK ON CLICK
+  if (type === "bot") {
+    const btn = msg.querySelector(".voice-btn");
+    btn.onclick = () => speak(text);
   }
+}
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-
-  recognition.start();
-
-  recognition.onresult = function (event) {
-    const transcript = event.results[0][0].transcript;
-    document.getElementById("user-input").value = transcript;
-  };
-
-  recognition.onerror = function () {
-    alert("Mic error. Allow permission.");
-  };
+// 🔊 TEXT TO SPEECH
+function speak(text) {
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-IN";
+  window.speechSynthesis.speak(speech);
 }
