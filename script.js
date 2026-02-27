@@ -1,150 +1,87 @@
-console.log("JS Loaded ✅");
+const chatBox = document.getElementById("chat-box");
 
-// 🔥 Firebase
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "campusbuddyai-ae666.firebaseapp.com",
-  projectId: "campusbuddyai-ae666",
-};
+function appendMessage(text, sender) {
+  const msg = document.createElement("div");
+  msg.classList.add("message", sender);
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+  msg.innerHTML = `
+    <span class="text"></span>
+    ${sender === "bot" ? '<div class="voice-btn" onclick="speakText(this)">🔊</div>' : ''}
+  `;
 
-// 🎯 Elements
-const chat = document.getElementById("chat");
-const inputField = document.getElementById("userInput");
-const askBtn = document.getElementById("askBtn");
-const micBtn = document.getElementById("micBtn");
-const wave = document.getElementById("wave");
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
 
-// 🎤 Voice Recognition (FIXED)
-let recognition;
-let isListening = false;
-
-if ('webkitSpeechRecognition' in window) {
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = "en-IN";
-
-  recognition.onstart = () => {
-    isListening = true;
-    wave.style.display = "flex";
-  };
-
-  recognition.onend = () => {
-    isListening = false;
-    wave.style.display = "none";
-  };
-
-  recognition.onresult = (event) => {
-    inputField.value = event.results[0][0].transcript;
-  };
-
-} else {
-  alert("Voice not supported in this browser");
+  typeText(msg.querySelector(".text"), text);
 }
 
-// 🎤 Mic button FIX
-micBtn.onclick = () => {
-  if (!recognition) return;
+// typing animation
+function typeText(element, text) {
+  let i = 0;
+  const interval = setInterval(() => {
+    element.textContent += text[i];
+    i++;
+    if (i >= text.length) clearInterval(interval);
+  }, 20);
+}
 
-  if (!isListening) {
-    recognition.start();
-  } else {
-    recognition.stop();
-  }
-};
+// send message
+function sendMessage() {
+  const input = document.getElementById("user-input");
+  const text = input.value.trim();
+  if (!text) return;
 
-// 🔊 Speech FIX (no glitch)
-function speak(text) {
-  window.speechSynthesis.cancel(); // STOP previous speech
+  appendMessage(text, "user");
+
+  input.value = "";
+
+  // simple bot reply
+  setTimeout(() => {
+    appendMessage(getBotReply(text), "bot");
+  }, 500);
+}
+
+// bot logic
+function getBotReply(text) {
+  text = text.toLowerCase();
+
+  if (text.includes("hi")) return "Hello! How can I help you?";
+  if (text.includes("canteen")) return "Canteen is open from 9 AM to 5 PM.";
+  if (text.includes("library")) return "Library is open till 8 PM.";
+  
+  return "I am your campus assistant 🤖";
+}
+
+// voice speak
+function speakText(btn) {
+  const text = btn.parentElement.querySelector(".text").textContent;
 
   const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = "en-IN";
-
+  speech.lang = "en-US";
   window.speechSynthesis.speak(speech);
 }
 
-// ⌨️ Typing animation FIXED
-function typeMessage(text, element) {
-  let i = 0;
-  element.innerHTML = "";
+// mic input
+function startListening() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  const typing = setInterval(() => {
-    if (i < text.length) {
-      element.textContent += text.charAt(i);
-      i++;
-    } else {
-      clearInterval(typing);
-
-      // ✅ Add button AFTER typing finishes (no glitch)
-      const btn = document.createElement("button");
-      btn.innerText = "🔊";
-      btn.className = "speak-btn";
-
-      btn.onclick = () => speak(text);
-
-      element.appendChild(btn);
-    }
-  }, 18);
-}
-
-// 💬 Send message
-askBtn.onclick = sendMessage;
-
-inputField.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendMessage();
-});
-
-async function sendMessage() {
-
-  const userText = inputField.value.trim().toLowerCase();
-  if (!userText) return;
-
-  chat.innerHTML += `<div class="user">You: ${userText}</div>`;
-
-  const botDiv = document.createElement("div");
-  botDiv.className = "bot";
-  chat.appendChild(botDiv);
-
-  inputField.value = "";
-
-  let foundAnswer = null;
-
-  try {
-    const snapshot = await db.collection("faqs").get();
-
-    let bestMatch = null;
-    let highestScore = 0;
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-
-      if (data.question && data.answer) {
-        const question = data.question.toLowerCase();
-
-        let score = 0;
-        userText.split(" ").forEach(word => {
-          if (question.includes(word)) score++;
-        });
-
-        if (score > highestScore) {
-          highestScore = score;
-          bestMatch = data.answer;
-        }
-      }
-    });
-
-    if (highestScore > 0) foundAnswer = bestMatch;
-
-  } catch (err) {
-    console.error("Firebase error:", err);
+  if (!SpeechRecognition) {
+    alert("Mic not supported in this browser");
+    return;
   }
 
-  if (!foundAnswer) {
-    foundAnswer = "Sorry, I couldn't find an answer.";
-  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
 
-  typeMessage("Bot: " + foundAnswer, botDiv);
+  recognition.start();
 
-  chat.scrollTop = chat.scrollHeight;
+  recognition.onresult = function (event) {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById("user-input").value = transcript;
+  };
+
+  recognition.onerror = function () {
+    alert("Mic error. Allow permission.");
+  };
 }
