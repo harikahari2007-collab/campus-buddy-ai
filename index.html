@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Campus Buddy AI</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- 🔥 Firebase CDN (NON-MODULE → works in Live Server) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+
+  <h2>🎓 Campus Buddy AI</h2>
+
+  <div id="chat"></div>
+
+  <!-- 🌊 Voice wave -->
+  <div id="wave" class="wave" style="display:none;">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div class="input-area">
+    <input type="text" id="userInput" placeholder="Ask something...">
+    <button id="micBtn">🎤</button>
+    <button id="askBtn">Send</button>
+  </div>
+
+  <!-- NORMAL SCRIPT (NOT module) -->
+  <script src="script.js"></script>
+
+</body>
+</html>

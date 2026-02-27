@@ -1,0 +1,57 @@
+/* Reset problematic styles */
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent buttons from breaking */
+button, input, textarea {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Fix click issues */
+button {
+  cursor: pointer;
+  z-index: 10;
+  position: relative;
+}
+
+/* Avoid overlays blocking clicks */
+div, section {
+  pointer-events: auto;
+}
+
+/* Remove accidental blocking layers */
+.overlay, .backdrop {
+  pointer-events: none !important;
+}
+
+/* Fix audio/mic related UI */
+audio, video {
+  pointer-events: auto;
+  z-index: 5;
+}
+
+/* Prevent layout glitches */
+body {
+  overflow-x: hidden;
+}
+
+/* Fix animations causing lag */
+* {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Ensure mic button is clickable */
+.mic-button, .voice-btn {
+  pointer-events: auto !important;
+  z-index: 999 !important;
+  position: relative;
+}
+
+/* Fix invisible elements blocking UI */
+[style*="opacity: 0"], [style*="visibility: hidden"] {
+  pointer-events: none !important;
+}
