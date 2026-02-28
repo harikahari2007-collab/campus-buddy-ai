@@ -7,18 +7,33 @@
 </head>
 <body>
 
-<div class="chat-container">
-  <h2>🎓 Campus Buddy</h2>
+<!-- BACKGROUND SLIDER -->
+<div id="bg-slider"></div>
 
-  <div id="chat-box"></div>
-
-  <div class="input-area">
-    <input type="text" id="user-input" placeholder="Ask something..." />
-    <button id="send-btn">Send</button>
-    <button id="mic-btn">🎤</button>
+<!-- INTRO SCREEN -->
+<div id="intro-screen" class="intro-screen">
+  <div class="overlay">
+    <h1>Welcome to Anurag University</h1>
+    <p>Empowering Innovation. Building Futures.</p>
+    <button id="start-btn">Chat with Campus Buddy</button>
   </div>
 </div>
 
-<script src="script.js"></script>
+<!-- CHAT SECTION -->
+<div id="chat-section" class="hidden">
+  <div class="chat-container">
+    <h2>🎓 Campus Buddy</h2>
+
+    <div id="chat-box"></div>
+
+    <div class="input-area">
+      <input type="text" id="user-input" placeholder="Ask something..." />
+      <button id="send-btn">Send</button>
+    </div>
+
+  </div>
+</div>
+
+<script type="module" src="script.js"></script>
 </body>
 </html>

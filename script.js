@@ -1,97 +1,146 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* FIREBASE CONFIG (UNCHANGED) */
+const firebaseConfig = {
+  apiKey: "AIzaSyD0mVDTHfMJipFPfDyx9hkm4iT5QF4LoVI",
+  authDomain: "campusbuddyai-ae666.firebaseapp.com",
+  projectId: "campusbuddyai-ae666",
+  storageBucket: "campusbuddyai-ae666.appspot.com",
+  messagingSenderId: "639978847241",
+  appId: "1:639978847241:web:90668fbf5c2879b5c18cd8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* BACKGROUND IMAGES */
+const images = [
+  "https://i.postimg.cc/jShthWzn/au-event.jpg",
+  "https://i.postimg.cc/wjjbS3C1/au-gro.jpg",
+  "https://i.postimg.cc/NFtdb088/au-ground-2.jpg",
+  "https://i.postimg.cc/RZhXgytn/au-indore.jpg",
+  "https://i.postimg.cc/JnNqyLwM/au.jpg",
+  "https://i.postimg.cc/6550QgYD/au2.jpg"
+];
+
+let index = 0;
+const bg = document.getElementById("bg-slider");
+
+function changeBackground() {
+  if (!bg) return;
+  bg.style.backgroundImage = `url(${images[index]})`;
+  index = (index + 1) % images.length;
+}
+setInterval(changeBackground, 3000);
+changeBackground();
+
+/* INTRO */
+const startBtn = document.getElementById("start-btn");
+const introScreen = document.getElementById("intro-screen");
+const chatSection = document.getElementById("chat-section");
+
+startBtn.onclick = () => {
+  introScreen.style.display = "none";
+  chatSection.classList.remove("hidden");
+};
+
+/* UI */
 const input = document.getElementById("user-input");
 const chatBox = document.getElementById("chat-box");
 const sendBtn = document.getElementById("send-btn");
-const micBtn = document.getElementById("mic-btn");
 
-// ✅ FAQ DATA (RAG simulation)
-const faqs = [
-  { q: "canteen", a: "The canteen is open from 9 AM to 5 PM." },
-  { q: "library", a: "Library is open till 8 PM." },
-  { q: "fees", a: "Fees can be paid through the admin office or online portal." },
-  { q: "hostel", a: "Hostel facilities include WiFi, food, and security." }
-];
-
-// 🎯 SEND BUTTON
+/* SEND */
 sendBtn.onclick = sendMessage;
-
-// 🎯 ENTER KEY
-input.addEventListener("keypress", function(e) {
+input.addEventListener("keydown", e => {
   if (e.key === "Enter") sendMessage();
 });
 
-// 🎤 MIC SETUP
-let recognition;
-
-if ('webkitSpeechRecognition' in window) {
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = "en-IN";
-
-  recognition.onresult = function(event) {
-    const text = event.results[0][0].transcript;
-    input.value = text;
-    sendMessage();
-  };
-
-  recognition.onerror = () => alert("Mic error or permission denied");
-}
-
-// 🎤 MIC BUTTON
-micBtn.onclick = () => {
-  if (!recognition) {
-    alert("Use Chrome for mic");
-    return;
-  }
-  recognition.start();
-};
-
-// 💬 SEND MESSAGE FUNCTION
-function sendMessage() {
+/* SEND MESSAGE */
+async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
   addMessage(text, "user");
   input.value = "";
 
-  setTimeout(() => {
-    const reply = getAnswer(text);
-    addMessage(reply, "bot");
-  }, 500);
+  const typing = addMessage("Typing...", "bot");
+
+  const reply = await getAnswerFromFirebase(text);
+
+  chatBox.removeChild(typing);
+  addMessage(reply, "bot");
+
+  showImagesIfNeeded(text);
 }
 
-// 🤖 GET ANSWER (RAG logic)
-function getAnswer(userText) {
+/* FIREBASE LOGIC (UNCHANGED EXACTLY) */
+async function getAnswerFromFirebase(userText) {
   userText = userText.toLowerCase();
+  const snapshot = await getDocs(collection(db, "faqs"));
 
-  for (let item of faqs) {
-    if (userText.includes(item.q)) {
-      return item.a;
+  let bestMatch = null;
+  let highestScore = 0;
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    let score = 0;
+
+    if (data.question && data.question.toLowerCase().includes(userText))
+      score += 3;
+
+    if (data.keywords) {
+      data.keywords.forEach(k => {
+        if (userText.includes(k.toLowerCase()))
+          score++;
+      });
     }
-  }
 
-  return "I am your Campus Assistant. Ask about canteen, hostel, fees, library.";
+    if (score > highestScore) {
+      highestScore = score;
+      bestMatch = data.answer;
+    }
+  });
+
+  return bestMatch || "Sorry, no answer found.";
 }
 
-// 💬 ADD MESSAGE
+/* IMAGE RESPONSE */
+function showImagesIfNeeded(text) {
+  text = text.toLowerCase();
+
+  let selected = [];
+
+  if (text.includes("event")) selected.push(images[0]);
+  if (text.includes("ground")) selected.push(images[2]);
+  if (text.includes("campus")) selected.push(images[4]);
+
+  selected.forEach(url => {
+    const img = document.createElement("img");
+    img.src = url;
+    img.className = "image-response";
+    chatBox.appendChild(img);
+  });
+}
+
+/* ADD MESSAGE + SPEAKER */
 function addMessage(text, type) {
   const msg = document.createElement("div");
   msg.className = "message " + type;
 
-  msg.innerHTML = `
-    ${text}
-    ${type === "bot" ? `<div class="voice-btn">🔊</div>` : ""}
-  `;
+  if (type === "bot") {
+    msg.innerHTML = `${text} <span class="speaker">🔊</span>`;
+    msg.querySelector(".speaker").onclick = () => speak(text);
+  } else {
+    msg.textContent = text;
+  }
 
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
-
-  // 🔊 SPEAK ON CLICK
-  if (type === "bot") {
-    const btn = msg.querySelector(".voice-btn");
-    btn.onclick = () => speak(text);
-  }
+  return msg;
 }
 
-// 🔊 TEXT TO SPEECH
+/* SPEAK */
 function speak(text) {
   const speech = new SpeechSynthesisUtterance(text);
   speech.lang = "en-IN";
