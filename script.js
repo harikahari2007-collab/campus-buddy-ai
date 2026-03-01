@@ -27,13 +27,27 @@ const images = [
 let index = 0;
 const bg = document.getElementById("bg-slider");
 
+/* ✅ FIXED SMOOTH BACKGROUND (NO BLANK FLASH) */
+bg.style.backgroundImage = `url(${images[0]})`;
+
 function changeBackground() {
-  if (!bg) return;
-  bg.style.backgroundImage = `url(${images[index]})`;
   index = (index + 1) % images.length;
+
+  const nextImage = new Image();
+  nextImage.src = images[index];
+
+  nextImage.onload = () => {
+    bg.style.transition = "opacity 1s ease-in-out";
+    bg.style.opacity = 0.4;
+
+    setTimeout(() => {
+      bg.style.backgroundImage = `url(${images[index]})`;
+      bg.style.opacity = 1;
+    }, 400);
+  };
 }
-setInterval(changeBackground, 3000);
-changeBackground();
+
+setInterval(changeBackground, 2000);
 
 /* INTRO */
 const startBtn = document.getElementById("start-btn");
@@ -56,6 +70,37 @@ input.addEventListener("keydown", e => {
   if (e.key === "Enter") sendMessage();
 });
 
+/* MIC (UNCHANGED) */
+const micBtn = document.getElementById("mic-btn");
+let recognition;
+
+if ("webkitSpeechRecognition" in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = "en-IN";
+
+  recognition.onstart = () => {
+    micBtn.classList.add("mic-active");
+  };
+
+  recognition.onend = () => {
+    micBtn.classList.remove("mic-active");
+  };
+
+  recognition.onresult = (event) => {
+    const speech = event.results[0][0].transcript;
+    input.value = speech;
+    sendMessage();
+  };
+}
+
+micBtn.onclick = () => {
+  if (!recognition) {
+    alert("Use Chrome browser");
+    return;
+  }
+  recognition.start();
+};
+
 /* SEND MESSAGE */
 async function sendMessage() {
   const text = input.value.trim();
@@ -71,10 +116,12 @@ async function sendMessage() {
   chatBox.removeChild(typing);
   addMessage(reply, "bot");
 
+  // ❌ REMOVED AUTO SPEAK HERE
+
   showImagesIfNeeded(text);
 }
 
-/* FIREBASE LOGIC (UNCHANGED EXACTLY) */
+/* FIREBASE (UNCHANGED) */
 async function getAnswerFromFirebase(userText) {
   userText = userText.toLowerCase();
   const snapshot = await getDocs(collection(db, "faqs"));
@@ -105,7 +152,31 @@ async function getAnswerFromFirebase(userText) {
   return bestMatch || "Sorry, no answer found.";
 }
 
-/* IMAGE RESPONSE */
+/* ADD MESSAGE */
+function addMessage(text, type) {
+  const div = document.createElement("div");
+  div.className = "message " + type;
+
+  if (type === "bot") {
+    div.innerHTML = `${text} <span class="speaker">🔊</span>`;
+    div.querySelector(".speaker").onclick = () => speak(text);
+  } else {
+    div.textContent = text;
+  }
+
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  return div;
+}
+
+/* SPEAK (ONLY ON CLICK NOW) */
+function speak(text) {
+  const s = new SpeechSynthesisUtterance(text);
+  s.lang = "en-IN";
+  speechSynthesis.speak(s);
+}
+
+/* IMAGE RESPONSE (UNCHANGED) */
 function showImagesIfNeeded(text) {
   text = text.toLowerCase();
 
@@ -121,28 +192,4 @@ function showImagesIfNeeded(text) {
     img.className = "image-response";
     chatBox.appendChild(img);
   });
-}
-
-/* ADD MESSAGE + SPEAKER */
-function addMessage(text, type) {
-  const msg = document.createElement("div");
-  msg.className = "message " + type;
-
-  if (type === "bot") {
-    msg.innerHTML = `${text} <span class="speaker">🔊</span>`;
-    msg.querySelector(".speaker").onclick = () => speak(text);
-  } else {
-    msg.textContent = text;
-  }
-
-  chatBox.appendChild(msg);
-  chatBox.scrollTop = chatBox.scrollHeight;
-  return msg;
-}
-
-/* SPEAK */
-function speak(text) {
-  const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = "en-IN";
-  window.speechSynthesis.speak(speech);
 }
